@@ -59,6 +59,10 @@ tree.json
 aws-side-cdk/tests/
 aws-side-cdk/requirements*.txt
 aws-side-cdk/source.bat
+aws-side-cdk/.gitignore
+aws-side-cdk/README.md
+aws-side-cdk/cdk.json
+ws-side-cdk/vpn_aws_to_gcp/__init__.py
 
 aws-side-cdk/vpn_aws_to_gcp/aws_core_stack.py
 aws-side-cdk/vpn_aws_to_gcp/aws_vpn_stack.py
