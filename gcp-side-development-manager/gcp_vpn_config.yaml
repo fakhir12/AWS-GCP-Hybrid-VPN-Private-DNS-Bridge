@@ -1,0 +1,30 @@
+imports:
+  - path : gcp_vpn.jinja
+resources:
+  - name: gcp-vpn
+    type: gcp_vpn.jinja
+    properties:
+      env: dev
+      id: gcp-vpn
+      region: us-central1
+      
+      # # Networking   THESE MUST MATCH YOUR CORE DEPLOYMENT NAMES 
+      vpc_name: "dev-gcp-vpn-vpc"
+      ha_gw_name: "dev-gcp-vpn-ha-vpn-gw"
+      
+      gcp_asn: 65020
+      aws_asn: 64512
+
+      # VPN Secrets & IPs  AWS Side (From AWS Console)
+      aws_vpn_ip: "34.238.35.15" 
+      shared_secret: "._Vi9QneSr3b.AKtJ_gVh184j8zt4sES"
+
+      # BGP Peering (Add the /30 to the GCP side!)
+      gcp_bgp_ip: "169.254.74.86/30"
+      aws_bgp_ip: "169.254.74.85"
+
+      #   DNS CONFIG (Dynamic)  AWS Inbound Resolver IPs data will be get from aws core stack outputs  
+      aws_dns_ip_1: "10.10.2.253"
+      aws_dns_ip_2: "10.10.3.192"
+
+      dns_zone: "vpn.internal."

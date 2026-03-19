@@ -2,7 +2,7 @@
 
 This project establishes a **secure, encrypted bridge** between an AWS VPC and a GCP VPC, enabling seamless communication between resources in both clouds.
 
----
+----
 
 ## Key Features
 

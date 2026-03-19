@@ -54,11 +54,25 @@ tree.json
 *.old
 *.log
 
+aws-side-cdk/vpn_aws_to_gcp/aws_core_stack.py
+aws-side-cdk/vpn_aws_to_gcp/aws_vpn_stack.py
+gcp-side-development-manager/eurus_infra.jinja
+extra.txt
+
+
 # -----------------------------
 # Include specific files (track them)
 # -----------------------------
 # Ensure the following source files are included in Git
-!aws-side-cdk/vpn_aws_to_gcp/aws_core_stack.py
-!aws-side-cdk/vpn_aws_to_gcp/aws_vpn_stack.py
-!gcp-side-development-manager/eurus_infra.jinja
-!extra.txt
+!aws-side-cdk/vpn_aws_to_gcp/vpn_aws_to_gcp_stack.py
+!aws-side-cdk/app.py
+!gcp-side-development-manager/gcp_vpn_config.yaml
+!gcp-side-development-manager/gcp_vpn.jinja
+!gcp-side-development-manager/gcp_core.jinja
+!gcp-side-development-manager/gcp_core_config.yaml
+
+
+
+
+
+

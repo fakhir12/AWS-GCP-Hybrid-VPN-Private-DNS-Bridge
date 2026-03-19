@@ -1,0 +1,26 @@
+# =========================
+# GCP Core Infrastructure
+# =========================
+imports:
+  - path: gcp_core.jinja
+
+resources:
+  - name: gcp-core
+    type: gcp_core.jinja
+    properties:
+      
+      env: dev
+      id: gcp-vpn
+      region: us-central1
+
+      # Subnet CIDR for GCP VPC
+      subnet_cidr: "172.16.0.0/24"
+      aws_vpc_cidr: "10.10.0.0/16"
+
+
+      # GCP ASN for BGP (unique to GCP side)
+      gcp_asn: 65020
+
+     
+
+  

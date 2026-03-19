@@ -1,0 +1,78 @@
+{% set prefix = properties["env"] + "-" + properties["id"] %}
+{% set project = env["project"] %}
+
+resources:
+
+# 1. External VPN Gateway (AWS Side)
+- name: {{ prefix }}-external-gw
+  type: compute.v1.externalVpnGateway
+  properties:
+    redundancyType: SINGLE_IP_INTERNALLY_REDUNDANT
+    interfaces:
+      - id: 0
+        ipAddress: {{ properties["aws_vpn_ip"] }}
+
+# 2. The Cloud Router (Full Configuration)
+- name: {{ prefix }}-router
+  type: compute.v1.router
+  properties:
+    network: projects/{{ project }}/global/networks/{{ properties["vpc_name"] }}
+    region: {{ properties["region"] }}
+    bgp:
+      asn: {{ properties["gcp_asn"] }}
+      advertiseMode: CUSTOM
+      advertisedGroups:
+        - ALL_SUBNETS  # Keeps your normal VPC traffic flowing
+      advertisedIpRanges:
+        - range: 35.199.192.0/19
+          description: "Route for GCP Cloud DNS Forwarding"
+    interfaces:
+      - name: if-tunnel-1
+        # We use a hardcoded string reference here to avoid CYCLIC_REFERENCES
+        linkedVpnTunnel: projects/{{ project }}/regions/{{ properties["region"] }}/vpnTunnels/{{ prefix }}-tunnel-1
+        ipRange: {{ properties["gcp_bgp_ip"] }}
+    bgpPeers:
+      - name: bgp-aws-peer-1
+        interfaceName: if-tunnel-1
+        peerIpAddress: {{ properties["aws_bgp_ip"] }}
+        peerAsn: {{ properties["aws_asn"] }}
+
+# 3. The VPN Tunnel
+- name: {{ prefix }}-tunnel-1
+  type: compute.v1.vpnTunnel
+  properties:
+    region: {{ properties["region"] }}
+    vpnGateway: projects/{{ project }}/regions/{{ properties["region"] }}/vpnGateways/{{ properties["ha_gw_name"] }}
+    vpnGatewayInterface: 0
+    peerExternalGateway: $(ref.{{ prefix }}-external-gw.selfLink)
+    peerExternalGatewayInterface: 0
+    sharedSecret: {{ properties["shared_secret"] }}
+    ikeVersion: 2
+    # POINT TO THE ROUTER BY NAME (breaks the cycle)
+    router: $(ref.{{ prefix }}-router.selfLink)
+
+# 4. Cloud DNS Forwarding Zone
+- name: {{ prefix }}-dns-forwarder
+  type: dns.v1.managedZone
+  properties:
+    dnsName: {{ properties["dns_zone"] if properties["dns_zone"].endswith('.') else properties["dns_zone"] + '.' }}
+    description: "Forwarding DNS queries to AWS Route 53 Resolver"
+    visibility: private
+    privateVisibilityConfig:
+      networks:
+        # Added 'compute' into the URL path
+        - networkUrl: https://www.googleapis.com/compute/v1/projects/{{ project }}/global/networks/{{ properties["vpc_name"] }}
+    forwardingConfig:
+      targetNameServers:
+        - ipv4Address: {{ properties["aws_dns_ip_1"] }}
+        - ipv4Address: {{ properties["aws_dns_ip_2"] }}
+# 5. DNS Server Policy for Inbound Forwarding
+- name: {{ prefix }}-dns-inbound-policy
+  type: gcp-types/dns-v1:policies
+  properties:
+    # Explicitly adding the name field required by the API
+    name: {{ prefix }}-dns-inbound-policy
+    description: "Allows inbound DNS queries from AWS via VPN"
+    enableInboundForwarding: true
+    networks:
+      - networkUrl: https://www.googleapis.com/compute/v1/projects/{{ project }}/global/networks/{{ properties["vpc_name"] }}

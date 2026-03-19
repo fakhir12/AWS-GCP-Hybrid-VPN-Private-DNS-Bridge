@@ -1,0 +1,90 @@
+{% set prefix = properties["env"] + "-" + properties["id"] %}
+
+resources:
+
+- name: {{ prefix }}-vpc
+  type: compute.v1.network
+  properties:
+    autoCreateSubnetworks: false
+
+- name: {{ prefix }}-subnet
+  type: compute.v1.subnetwork
+  properties:
+    network: $(ref.{{ prefix }}-vpc.selfLink)
+    ipCidrRange: {{ properties["subnet_cidr"] }}
+    region: {{ properties["region"] }}
+    privateIpGoogleAccess: true
+
+# 3. HA VPN Gateway (This generates your Public IPs automatically)
+- name: {{ prefix }}-ha-vpn-gw
+  type: compute.v1.vpnGateway
+  properties:
+    region: {{ properties["region"] }}
+    network: $(ref.{{ prefix }}-vpc.selfLink)
+    stackType: IPV4_ONLY
+
+
+# 4. Firewall: Allow BGP Traffic
+# Essential for the Cloud Router to talk to AWS
+- name: {{ prefix }}-allow-bgp
+  type: compute.v1.firewall
+  properties:
+    network: $(ref.{{ prefix }}-vpc.selfLink)
+    sourceRanges: ["169.254.0.0/16"]
+    allowed:
+      - IPProtocol: tcp
+        ports: ['179']
+      - IPProtocol: icmp
+
+# 5. Firewall: Allow Traffic from AWS VPC
+# This lets the 10.10.x.x range reach your GCP resources
+- name: {{ prefix }}-allow-aws-internal
+  type: compute.v1.firewall
+  properties:
+    network: $(ref.{{ prefix }}-vpc.selfLink)
+    sourceRanges: [{{ properties["aws_vpc_cidr"] }}] # e.g., 10.10.0.0/16
+    allowed:
+      - IPProtocol: all
+
+# 6. Firewall: Allow SSH via IAP (Optional but recommended)
+# Lets you SSH into your test VMs from the GCP Console
+- name: {{ prefix }}-allow-ssh-iap
+  type: compute.v1.firewall
+  properties:
+    network: $(ref.{{ prefix }}-vpc.selfLink)
+    sourceRanges: ["35.235.240.0/20"]
+    allowed:
+      - IPProtocol: tcp
+        ports: ['22']
+
+# 7. Test VM Instance
+- name: {{ prefix }}-test-vm
+  type: compute.v1.instance
+  properties:
+    zone: {{ properties["region"] }}-a
+    machineType: zones/{{ properties["region"] }}-a/machineTypes/e2-micro
+    disks:
+      - deviceName: boot
+        type: PERSISTENT
+        boot: true
+        autoDelete: true
+        initializeParams:
+          sourceImage: projects/debian-cloud/global/images/family/debian-12
+    networkInterfaces:
+      - subnetwork: $(ref.{{ prefix }}-subnet.selfLink)
+        # AccessConfig is required for a Public IP (to SSH into it)
+        accessConfigs:
+          - name: External NAT
+            type: ONE_TO_ONE_NAT
+
+- name: {{ prefix }}-allow-dns-proxy
+  type: compute.v1.firewall
+  properties:
+    network: $(ref.{{ prefix }}-vpc.selfLink)
+    # The standard Google Cloud DNS source range
+    sourceRanges: ["35.199.192.0/19"]
+    allowed:
+      - IPProtocol: udp
+        ports: ['53']
+      - IPProtocol: tcp
+        ports: ['53']
