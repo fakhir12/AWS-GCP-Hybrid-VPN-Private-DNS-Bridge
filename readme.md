@@ -167,6 +167,4 @@ gcloud compute routers get-status <router-name> --region <region> --format="yaml
 
 ```
 
----
-
 
