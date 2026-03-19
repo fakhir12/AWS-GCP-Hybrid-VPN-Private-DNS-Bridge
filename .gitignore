@@ -1,0 +1,64 @@
+# -----------------------------
+# Python
+# -----------------------------
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.log
+*.env
+.venv/
+.env/
+pip-wheel-metadata/
+__pypackages__/
+
+# -----------------------------
+# VS Code / IDE
+# -----------------------------
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# -----------------------------
+# AWS CDK
+# -----------------------------
+cdk.out/
+cdk.context.json
+*.template.json
+*.assets.json
+*.metadata.json
+tree.json
+*.tsbuildinfo
+
+# -----------------------------
+# GCP Deployment Manager
+# -----------------------------
+*.jinja
+*.yaml
+*.yml
+
+# -----------------------------
+# General
+# -----------------------------
+*.bak
+*.swp
+*.DS_Store
+*.tmp
+*.old
+*.log
+
+# -----------------------------
+# Include specific files (track them)
+# -----------------------------
+# Ensure the following source files are included in Git
+!aws-side-cdk/vpn_aws_to_gcp/aws_core_stack.py
+!aws-side-cdk/vpn_aws_to_gcp/aws_vpn_stack.py
+!gcp-side-development-manager/eurus_infra.jinja
+!extra.txt

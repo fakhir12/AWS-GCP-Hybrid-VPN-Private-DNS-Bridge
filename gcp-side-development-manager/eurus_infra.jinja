@@ -1,0 +1,129 @@
+{% set prefix = properties["env"] + "-" + properties["id"] + "-" + properties["region"] %}
+
+resources:
+  # === PHASE 1: Core Infrastructure (Always created) ===
+  - name: {{ prefix }}-vpc
+    type: compute.v1.network
+    properties:
+      autoCreateSubnetworks: false
+
+  - name: {{ prefix }}-private-subnet
+    type: compute.v1.subnetwork
+    properties:
+      network: $(ref.{{ prefix }}-vpc.selfLink)
+      ipCidrRange: {{ properties["subnet_cidr"] }}
+      region: {{ properties["region"] }}
+
+  - name: {{ prefix }}-router
+    type: compute.v1.router
+    properties:
+      network: $(ref.{{ prefix }}-vpc.selfLink)
+      region: {{ properties["region"] }}
+      bgp:
+        asn: {{ properties["gcp_asn"] }}
+        advertiseMode: CUSTOM
+        advertisedIpRanges:
+          - range: 35.199.192.0/19
+            description: "Google DNS Forwarding"
+
+  - name: {{ prefix }}-nat
+    type: compute.v1.router
+    properties:
+      network: $(ref.{{ prefix }}-vpc.selfLink)
+      region: {{ properties["region"] }}
+      nats:
+        - name: {{ prefix }}-nat-gw
+          sourceSubnetworkIpRangesToNat: ALL_SUBNETWORKS_ALL_IP_RANGES
+          natIpAllocateOption: AUTO_ONLY
+
+  - name: {{ prefix }}-vm
+    type: compute.v1.instance
+    properties:
+      zone: {{ properties["region"] }}-a
+      machineType: zones/{{ properties["region"] }}-a/machineTypes/e2-micro
+      disks:
+        - deviceName: boot
+          type: PERSISTENT
+          boot: true
+          autoDelete: true
+          initializeParams:
+            sourceImage: projects/debian-cloud/global/images/family/debian-11
+      networkInterfaces:
+        - subnetwork: $(ref.{{ prefix }}-private-subnet.selfLink)
+          accessConfigs:
+            - name: External NAT
+              type: ONE_TO_ONE_NAT
+
+  # VPN Foundation (Always created in Phase 1)
+  - name: {{ prefix }}-vpn-ip
+    type: compute.v1.address
+    properties:
+      region: {{ properties["region"] }}
+
+  - name: {{ prefix }}-vpn-gateway
+    type: compute.v1.targetVpnGateway
+    properties:
+      network: $(ref.{{ prefix }}-vpc.selfLink)
+      region: {{ properties["region"] }}
+
+  # === PHASE 2: AWS-Dependent Resources (Only created when values exist) ===
+  {% if properties["deployment_phase"] == "phase2" or (properties["aws_vpn_ip"] is defined and properties["aws_vpn_ip"]) %}
+  
+  # Forwarding Rules
+  - name: {{ prefix }}-fr-esp
+    type: compute.v1.forwardingRule
+    properties:
+      region: {{ properties["region"] }}
+      IPAddress: $(ref.{{ prefix }}-vpn-ip.address)
+      IPProtocol: ESP
+      target: $(ref.{{ prefix }}-vpn-gateway.selfLink)
+
+  - name: {{ prefix }}-fr-udp500
+    type: compute.v1.forwardingRule
+    properties:
+      region: {{ properties["region"] }}
+      IPAddress: $(ref.{{ prefix }}-vpn-ip.address)
+      IPProtocol: UDP
+      portRange: 500
+      target: $(ref.{{ prefix }}-vpn-gateway.selfLink)
+
+  - name: {{ prefix }}-fr-udp4500
+    type: compute.v1.forwardingRule
+    properties:
+      region: {{ properties["region"] }}
+      IPAddress: $(ref.{{ prefix }}-vpn-ip.address)
+      IPProtocol: UDP
+      portRange: 4500
+      target: $(ref.{{ prefix }}-vpn-gateway.selfLink)
+
+  # VPN Tunnel
+  - name: {{ prefix }}-vpn-tunnel
+    type: compute.v1.vpnTunnel
+    properties:
+      region: {{ properties["region"] }}
+      targetVpnGateway: $(ref.{{ prefix }}-vpn-gateway.selfLink)
+      peerIp: {{ properties["aws_vpn_ip"] }}
+      sharedSecret: {{ properties["shared_secret"] }}
+      ikeVersion: 2
+      localTrafficSelector: ["0.0.0.0/0"]
+      remoteTrafficSelector: ["0.0.0.0/0"]
+  {% endif %}
+
+  # === PHASE 3: DNS Forwarding (Only created when DNS IPs exist) ===
+  {% if properties["deployment_phase"] == "phase3" or (properties["aws_dns_ip_1"] is defined and properties["aws_dns_ip_1"] and properties["aws_dns_ip_2"] is defined and properties["aws_dns_ip_2"]) %}
+  
+  - name: {{ prefix }}-dns-forwarding
+    type: gcp-types/dns-v1:managedZones
+    properties:
+      name: {{ prefix }}-dns-forwarding
+      dnsName: {{ properties["dns_zone_name"] }}
+      description: "Forwarding DNS queries to AWS Route53 Resolver"
+      visibility: private
+      privateVisibilityConfig:
+        networks:
+          - networkUrl: $(ref.{{ prefix }}-vpc.selfLink)
+      forwardingConfig:
+        targetNameServers:
+          - ipv4Address: {{ properties["aws_dns_ip_1"] }}
+          - ipv4Address: {{ properties["aws_dns_ip_2"] }}
+  {% endif %}
