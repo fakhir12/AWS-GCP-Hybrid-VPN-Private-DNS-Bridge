@@ -166,5 +166,3 @@ gcloud compute routers get-status <router-name> --region <region> --format="yaml
 * Use **GCP IP Interface 0** for AWS configuration.
 
 ```
-
-
