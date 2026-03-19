@@ -132,32 +132,6 @@ gcloud deployment-manager deployments create <deployment-name> --config <config-
 gcloud deployment-manager deployments update <deployment-name> --config <config-file>
 ```
 
----
-
-## Verification
-
-* **AWS → GCP DNS:**
-
-```bash
-dig dev-gcp-vpn-test-vm.c.eurus-project-dev.internal
-```
-
-* **GCP → AWS DNS:**
-
-```bash
-dig test.vpn.internal
-```
-
-* **BGP / VPN Tunnel Status:**
-
-```bash
-gcloud compute routers get-status <router-name> --region <region> --format="yaml(result.bgpPeerStatus)"
-```
-
----
-
-
-
 ## Important Notes
 
 * IKEv2 must match on both sides.
