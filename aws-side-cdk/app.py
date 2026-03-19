@@ -1,7 +1,7 @@
 import aws_cdk as cdk
 from vpn_aws_to_gcp.vpn_aws_to_gcp_stack import AwsCoreStack
 
-synth = cdk.DefaultStackSynthesizer(qualifier="gcp-vpn-1")
+synth = cdk.DefaultStackSynthesizer(qualifier="gcp-vpn")
 app = cdk.App()
 
 

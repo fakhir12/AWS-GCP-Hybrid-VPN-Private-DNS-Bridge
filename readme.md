@@ -111,8 +111,9 @@ gcloud deployment-manager deployments create gcp-vpn --config gcp_vpn_config.yam
 
 ### AWS CDK
 
+* `cdk bootstrap aws://387867038403/us-east-1 --qualifier gcp-vpn` 
 * `cdk synth` – Preview CloudFormation template
-* `cdk deploy` – Deploy or update stack
+* `cdk deploy aws-hybrid-stack` – Deploy or update stack
 * `cdk destroy` – Tear down stack
 
 ### GCP Deployment Manager
@@ -155,15 +156,7 @@ gcloud compute routers get-status <router-name> --region <region> --format="yaml
 
 ---
 
-## Troubleshooting
 
-| Issue                | Solution                                                                                                      |
-| -------------------- | ------------------------------------------------------------------------------------------------------------- |
-| DNS resolution fails | Ensure AWS Security Group allows inbound UDP 53 from `35.199.192.0/19`.                                       |
-| Ping fails           | Ensure AWS Security Group allows ICMP from `172.16.0.0/24`.                                                   |
-| GCP deletion error   | Clear networks in DNS policies: <br>`gcloud dns policies update dev-gcp-vpn-dns-inbound-policy --networks=""` |
-
----
 
 ## Important Notes
 
@@ -176,7 +169,4 @@ gcloud compute routers get-status <router-name> --region <region> --format="yaml
 
 ---
 
-If you want, I can also **add a “Quickstart Commands Table”** at the top with **all essential commands in sequence**, so anyone can deploy the stack **without reading the whole guide**.  
 
-Do you want me to add that?
-```
