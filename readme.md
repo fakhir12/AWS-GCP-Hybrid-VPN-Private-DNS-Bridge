@@ -164,5 +164,3 @@ gcloud compute routers get-status <router-name> --region <region> --format="yaml
 * PSK must match exactly, including special characters.
 * Only **one VPN tunnel** is active.
 * Use **GCP IP Interface 0** for AWS configuration.
-
-```
